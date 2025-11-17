@@ -1,14 +1,18 @@
-// Sistema de Chat em Tempo Real com Áudio e Fotos
+// Sistema de Chat Completo com Perfil e Notificações
+const ADMIN_PASSWORD = 'Range@2126';
+
 class ChatPlatform {
     constructor() {
         this.currentUser = null;
         this.currentChat = null;
         this.accessCodes = new Map();
         this.allUsers = new Map();
+        this.userProfiles = new Map();
         this.allMessages = [];
         this.mediaRecorder = null;
         this.audioChunks = [];
         this.isRecording = false;
+        this.lastMessageCount = 0;
         
         this.init();
     }
@@ -27,9 +31,15 @@ class ChatPlatform {
             this.buildUsersFromCodes();
         }
 
+        const savedProfiles = localStorage.getItem('userProfiles');
+        if (savedProfiles) {
+            this.userProfiles = new Map(JSON.parse(savedProfiles));
+        }
+
         const savedMessages = localStorage.getItem('globalMessages');
         if (savedMessages) {
             this.allMessages = JSON.parse(savedMessages);
+            this.lastMessageCount = this.allMessages.length;
         }
 
         const savedUser = localStorage.getItem('currentUser');
@@ -43,11 +53,14 @@ class ChatPlatform {
     buildUsersFromCodes() {
         this.allUsers.clear();
         this.accessCodes.forEach((data, code) => {
+            const profile = this.userProfiles.get(code) || {};
             this.allUsers.set(code, {
                 id: code,
-                name: data.assignedName,
-                avatar: data.assignedName.charAt(0).toUpperCase(),
+                name: profile.name || data.assignedName,
+                avatar: profile.photo || (profile.name || data.assignedName).charAt(0).toUpperCase(),
                 accessCode: code,
+                status: profile.status || '',
+                photo: profile.photo || null,
                 online: false
             });
         });
@@ -55,6 +68,7 @@ class ChatPlatform {
 
     saveToStorage() {
         localStorage.setItem('accessCodes', JSON.stringify([...this.accessCodes]));
+        localStorage.setItem('userProfiles', JSON.stringify([...this.userProfiles]));
         localStorage.setItem('globalMessages', JSON.stringify(this.allMessages));
         if (this.currentUser) {
             localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
@@ -71,13 +85,28 @@ class ChatPlatform {
             if (e.key === 'Enter') this.handleLogin();
         });
 
-        // Admin
-        document.getElementById('adminBtn').addEventListener('click', () => this.showAdminScreen());
+        // Admin Password
+        document.getElementById('adminBtn').addEventListener('click', () => this.showAdminPasswordScreen());
+        document.getElementById('adminPasswordBtn').addEventListener('click', () => this.checkAdminPassword());
+        document.getElementById('adminPasswordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.checkAdminPassword();
+        });
+        document.getElementById('cancelAdminBtn').addEventListener('click', () => this.showLoginScreen());
         document.getElementById('backToLoginBtn').addEventListener('click', () => this.showLoginScreen());
         document.getElementById('createAccessBtn').addEventListener('click', () => this.createAccessCode());
 
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', () => this.handleLogout());
+
+        // Profile
+        document.getElementById('userInfoClick').addEventListener('click', () => this.showProfileModal());
+        document.getElementById('closeProfileModal').addEventListener('click', () => this.closeProfileModal());
+        document.getElementById('changePhotoBtn').addEventListener('click', () => {
+            document.getElementById('profilePhotoInput').click();
+        });
+        document.getElementById('profilePhotoInput').addEventListener('change', (e) => this.updateProfilePhoto(e));
+        document.getElementById('saveNameBtn').addEventListener('click', () => this.updateProfileName());
+        document.getElementById('saveStatusBtn').addEventListener('click', () => this.updateProfileStatus());
 
         // Mensagem
         document.getElementById('sendBtn').addEventListener('click', () => this.sendMessage());
@@ -96,16 +125,17 @@ class ChatPlatform {
         document.getElementById('photoInput').addEventListener('change', (e) => this.handlePhotoUpload(e));
         
         // Áudio
-        document.getElementById('audioBtn').addEventListener('mousedown', () => this.startRecording());
-        document.getElementById('audioBtn').addEventListener('mouseup', () => this.stopRecording());
-        document.getElementById('audioBtn').addEventListener('mouseleave', () => {
+        const audioBtn = document.getElementById('audioBtn');
+        audioBtn.addEventListener('mousedown', () => this.startRecording());
+        audioBtn.addEventListener('mouseup', () => this.stopRecording());
+        audioBtn.addEventListener('mouseleave', () => {
             if (this.isRecording) this.stopRecording();
         });
-        document.getElementById('audioBtn').addEventListener('touchstart', (e) => {
+        audioBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.startRecording();
         });
-        document.getElementById('audioBtn').addEventListener('touchend', (e) => {
+        audioBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
             this.stopRecording();
         });
@@ -124,12 +154,33 @@ class ChatPlatform {
 
     showLoginScreen() {
         document.getElementById('loginScreen').classList.add('active');
+        document.getElementById('adminPasswordScreen').classList.remove('active');
         document.getElementById('adminScreen').classList.remove('active');
         document.getElementById('chatScreen').classList.remove('active');
+        document.getElementById('adminPasswordInput').value = '';
+    }
+
+    showAdminPasswordScreen() {
+        document.getElementById('loginScreen').classList.remove('active');
+        document.getElementById('adminPasswordScreen').classList.add('active');
+        document.getElementById('adminScreen').classList.remove('active');
+        document.getElementById('chatScreen').classList.remove('active');
+        document.getElementById('adminPasswordInput').focus();
+    }
+
+    checkAdminPassword() {
+        const password = document.getElementById('adminPasswordInput').value;
+        if (password === ADMIN_PASSWORD) {
+            this.showAdminScreen();
+        } else {
+            alert('Senha incorreta!');
+            document.getElementById('adminPasswordInput').value = '';
+        }
     }
 
     showAdminScreen() {
         document.getElementById('loginScreen').classList.remove('active');
+        document.getElementById('adminPasswordScreen').classList.remove('active');
         document.getElementById('adminScreen').classList.add('active');
         document.getElementById('chatScreen').classList.remove('active');
         this.renderAccessCodes();
@@ -137,14 +188,115 @@ class ChatPlatform {
 
     showChatScreen() {
         document.getElementById('loginScreen').classList.remove('active');
+        document.getElementById('adminPasswordScreen').classList.remove('active');
         document.getElementById('adminScreen').classList.remove('active');
         document.getElementById('chatScreen').classList.add('active');
         
-        document.getElementById('currentUsername').textContent = this.currentUser.name;
-        document.getElementById('currentUserAvatar').textContent = this.currentUser.avatar;
-        
+        this.updateCurrentUserDisplay();
         this.updateOnlineStatus();
         this.renderConversations();
+    }
+
+    updateCurrentUserDisplay() {
+        const profile = this.userProfiles.get(this.currentUser.accessCode) || {};
+        const displayName = profile.name || this.currentUser.name;
+        const displayStatus = profile.status || '';
+        const displayPhoto = profile.photo;
+
+        document.getElementById('currentUsername').textContent = displayName;
+        document.getElementById('currentUserStatus').textContent = displayStatus;
+        
+        const avatarEl = document.getElementById('currentUserAvatar');
+        if (displayPhoto) {
+            avatarEl.style.backgroundImage = `url(${displayPhoto})`;
+            avatarEl.style.backgroundSize = 'cover';
+            avatarEl.textContent = '';
+        } else {
+            avatarEl.style.backgroundImage = '';
+            avatarEl.textContent = displayName.charAt(0).toUpperCase();
+        }
+    }
+
+    showProfileModal() {
+        const profile = this.userProfiles.get(this.currentUser.accessCode) || {};
+        
+        document.getElementById('profileNameInput').value = profile.name || this.currentUser.name;
+        document.getElementById('profileStatusInput').value = profile.status || '';
+        document.getElementById('profileAccessCode').textContent = this.currentUser.accessCode;
+        
+        const avatarEl = document.getElementById('profileAvatar');
+        if (profile.photo) {
+            avatarEl.style.backgroundImage = `url(${profile.photo})`;
+            avatarEl.style.backgroundSize = 'cover';
+            avatarEl.textContent = '';
+        } else {
+            avatarEl.style.backgroundImage = '';
+            avatarEl.textContent = (profile.name || this.currentUser.name).charAt(0).toUpperCase();
+        }
+        
+        document.getElementById('profileModal').classList.add('show');
+    }
+
+    closeProfileModal() {
+        document.getElementById('profileModal').classList.remove('show');
+    }
+
+    updateProfilePhoto(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const profile = this.userProfiles.get(this.currentUser.accessCode) || {};
+            profile.photo = e.target.result;
+            this.userProfiles.set(this.currentUser.accessCode, profile);
+            this.saveToStorage();
+            this.buildUsersFromCodes();
+            
+            const avatarEl = document.getElementById('profileAvatar');
+            avatarEl.style.backgroundImage = `url(${e.target.result})`;
+            avatarEl.style.backgroundSize = 'cover';
+            avatarEl.textContent = '';
+            
+            this.updateCurrentUserDisplay();
+            this.renderConversations();
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    }
+
+    updateProfileName() {
+        const newName = document.getElementById('profileNameInput').value.trim();
+        if (!newName) {
+            alert('Digite um nome válido');
+            return;
+        }
+
+        const profile = this.userProfiles.get(this.currentUser.accessCode) || {};
+        profile.name = newName;
+        this.userProfiles.set(this.currentUser.accessCode, profile);
+        this.saveToStorage();
+        this.buildUsersFromCodes();
+        
+        this.currentUser.name = newName;
+        localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+        
+        this.updateCurrentUserDisplay();
+        this.renderConversations();
+        alert('Nome atualizado!');
+    }
+
+    updateProfileStatus() {
+        const newStatus = document.getElementById('profileStatusInput').value.trim();
+        
+        const profile = this.userProfiles.get(this.currentUser.accessCode) || {};
+        profile.status = newStatus;
+        this.userProfiles.set(this.currentUser.accessCode, profile);
+        this.saveToStorage();
+        this.buildUsersFromCodes();
+        
+        this.updateCurrentUserDisplay();
+        alert('Recado atualizado!');
     }
 
     createAccessCode() {
@@ -174,7 +326,7 @@ class ChatPlatform {
         document.getElementById('newAccessCode').value = '';
         document.getElementById('newUserName').value = '';
 
-        alert(`Código ${code} criado com sucesso para ${name}!`);
+        alert(`Código ${code} criado! O usuário verá todos os contatos ao fazer login.`);
     }
 
     renderAccessCodes() {
@@ -186,13 +338,11 @@ class ChatPlatform {
         }
 
         container.innerHTML = '';
-        
         const onlineUsers = this.getOnlineUsers();
         
         this.accessCodes.forEach((data, code) => {
             const item = document.createElement('div');
             item.className = 'access-code-item';
-            
             const isOnline = onlineUsers.some(u => u.accessCode === code);
             
             item.innerHTML = `
@@ -213,6 +363,7 @@ class ChatPlatform {
     deleteAccessCode(code) {
         if (confirm(`Deseja realmente excluir o código ${code}?`)) {
             this.accessCodes.delete(code);
+            this.userProfiles.delete(code);
             this.buildUsersFromCodes();
             this.saveToStorage();
             this.renderAccessCodes();
@@ -292,7 +443,6 @@ class ChatPlatform {
 
     updateOnlineStatus() {
         const onlineUsers = this.getOnlineUsers();
-        
         this.allUsers.forEach((user, userId) => {
             user.online = onlineUsers.some(u => u.accessCode === userId);
         });
@@ -342,9 +492,13 @@ class ChatPlatform {
                 }
             }
 
+            const avatarContent = user.photo 
+                ? `<div class="avatar" style="background-image: url(${user.photo}); background-size: cover;"></div>`
+                : `<div class="avatar">${user.avatar}</div>`;
+
             item.innerHTML = `
                 <div class="avatar-wrapper">
-                    <div class="avatar">${user.avatar}</div>
+                    ${avatarContent}
                     <div class="${user.online ? 'online-indicator' : 'offline-indicator'}"></div>
                 </div>
                 <div class="conversation-info">
@@ -377,7 +531,17 @@ class ChatPlatform {
         document.getElementById('chatContent').style.display = 'flex';
         
         document.getElementById('chatUsername').textContent = user.name;
-        document.getElementById('chatAvatar').textContent = user.avatar;
+        
+        const chatAvatarEl = document.getElementById('chatAvatar');
+        if (user.photo) {
+            chatAvatarEl.style.backgroundImage = `url(${user.photo})`;
+            chatAvatarEl.style.backgroundSize = 'cover';
+            chatAvatarEl.textContent = '';
+        } else {
+            chatAvatarEl.style.backgroundImage = '';
+            chatAvatarEl.textContent = user.avatar;
+        }
+        
         document.getElementById('chatStatus').textContent = user.online ? 'online' : 'offline';
         document.getElementById('chatStatus').className = user.online ? 'status online' : 'status';
         
@@ -535,6 +699,7 @@ class ChatPlatform {
             if (this.currentUser) {
                 this.checkNewMessages();
                 this.updateOnlineStatus();
+                this.buildUsersFromCodes();
                 this.renderConversations();
                 
                 if (document.getElementById('adminScreen').classList.contains('active')) {
@@ -549,10 +714,9 @@ class ChatPlatform {
         if (!savedMessages) return;
 
         const newMessages = JSON.parse(savedMessages);
-        const oldCount = this.allMessages.length;
         
-        if (newMessages.length > oldCount) {
-            const latest = newMessages.slice(oldCount);
+        if (newMessages.length > this.lastMessageCount) {
+            const latest = newMessages.slice(this.lastMessageCount);
             
             latest.forEach(msg => {
                 if (msg.receiverCode === this.currentUser.accessCode && !msg.read) {
@@ -572,6 +736,7 @@ class ChatPlatform {
             });
             
             this.allMessages = newMessages;
+            this.lastMessageCount = newMessages.length;
             
             if (this.currentChat) {
                 this.renderMessages();
@@ -582,11 +747,14 @@ class ChatPlatform {
 
     showNotification(sender, message) {
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(sender, {
+            const notification = new Notification(sender, {
                 body: message,
                 icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2325D366"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.71-.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>',
-                tag: 'chat-message'
+                tag: 'chat-message-' + Date.now(),
+                requireInteraction: false
             });
+
+            setTimeout(() => notification.close(), 5000);
         }
 
         const toast = document.getElementById('notificationToast');
