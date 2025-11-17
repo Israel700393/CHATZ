@@ -26,6 +26,21 @@
         </div>
     </div>
 
+    <!-- Tela de Senha Admin -->
+    <div id="adminPasswordScreen" class="screen">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🔐 Acesso Admin</h1>
+                <p>Digite a senha de administrador</p>
+            </div>
+            <div class="login-form">
+                <input type="password" id="adminPasswordInput" placeholder="Senha Admin" maxlength="50">
+                <button id="adminPasswordBtn" class="btn-primary">Acessar</button>
+                <button id="cancelAdminBtn" class="btn-secondary" style="margin-top: 10px;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Tela Admin -->
     <div id="adminScreen" class="screen">
         <div class="admin-container">
@@ -60,9 +75,14 @@
             <!-- Sidebar com lista de conversas -->
             <div class="sidebar">
                 <div class="sidebar-header">
-                    <div class="user-info">
-                        <div class="avatar" id="currentUserAvatar"></div>
-                        <span id="currentUsername"></span>
+                    <div class="user-info" id="userInfoClick" style="cursor: pointer;">
+                        <div class="avatar-wrapper">
+                            <div class="avatar" id="currentUserAvatar"></div>
+                        </div>
+                        <div>
+                            <div id="currentUsername"></div>
+                            <div class="user-status" id="currentUserStatus"></div>
+                        </div>
                     </div>
                     <button id="logoutBtn" class="icon-btn" title="Sair">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
@@ -139,6 +159,57 @@
                             </svg>
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Perfil -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Meu Perfil</h2>
+                <button class="close-modal" id="closeProfileModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-photo-section">
+                    <div class="profile-photo-wrapper">
+                        <div class="avatar large" id="profileAvatar"></div>
+                        <button class="change-photo-btn" id="changePhotoBtn">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
+                                <path d="M12 15c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm0-8c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zM9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;">
+                </div>
+                
+                <div class="profile-field">
+                    <label>Nome</label>
+                    <div class="profile-input-group">
+                        <input type="text" id="profileNameInput" maxlength="30">
+                        <button id="saveNameBtn" class="icon-btn">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="profile-field">
+                    <label>Recado</label>
+                    <div class="profile-input-group">
+                        <input type="text" id="profileStatusInput" placeholder="Ex: Disponível, Ocupado..." maxlength="50">
+                        <button id="saveStatusBtn" class="icon-btn">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="profile-info">
+                    <p><strong>Código de Acesso:</strong> <span id="profileAccessCode"></span></p>
                 </div>
             </div>
         </div>
