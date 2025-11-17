@@ -347,6 +347,179 @@ body {
     50% { opacity: 0.3; }
 }
 
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    animation: fadeIn 0.3s;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: #202c33;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #2a3942;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    color: #e9edef;
+    font-size: 20px;
+    margin: 0;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    color: #8696a0;
+    font-size: 30px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    color: #e9edef;
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+/* Profile */
+.profile-photo-section {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.profile-photo-wrapper {
+    position: relative;
+}
+
+.avatar.large {
+    width: 120px;
+    height: 120px;
+    font-size: 48px;
+    background-size: cover;
+    background-position: center;
+}
+
+.change-photo-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #25D366;
+    border: 3px solid #202c33;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.change-photo-btn:hover {
+    background: #20ba5a;
+}
+
+.profile-field {
+    margin-bottom: 25px;
+}
+
+.profile-field label {
+    display: block;
+    color: #25D366;
+    font-size: 14px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.profile-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.profile-input-group input {
+    flex: 1;
+    background: #2a3942;
+    border: 2px solid #374045;
+    border-radius: 8px;
+    padding: 12px 15px;
+    color: #e9edef;
+    font-size: 15px;
+}
+
+.profile-input-group input:focus {
+    outline: none;
+    border-color: #25D366;
+}
+
+.profile-info {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #2a3942;
+}
+
+.profile-info p {
+    color: #8696a0;
+    font-size: 14px;
+    margin: 10px 0;
+}
+
+.profile-info strong {
+    color: #e9edef;
+}
+
+.user-status {
+    font-size: 12px;
+    color: #8696a0;
+    margin-top: 2px;
+}
+
 /* Chat Screen */
 .chat-container {
     display: flex;
